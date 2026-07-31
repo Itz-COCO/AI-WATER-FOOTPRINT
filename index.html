@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>AI Water Footprint Calculator</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            body {
+                font-family: 'Segoe UI' , Arial, sans-serif;
+                background-color: #1a1a2e;
+                color:#f5f0e8;
+                text-align: center;
+                padding: 40px 20px;
+                min-height: 100vh;
+            }
+            h1 {
+                color: #f5f0e8;
+                font-size: 1rem;
+                margin-bottom: 10px;
+            }
+            body > p {
+                color: #c4bba9;
+                font-size: 1rem;
+               margin-bottom: 30px; 
+            }
+            .water-display {
+                font-size: 3rem;
+                color: #00d4ff;
+                margin: 20px 0;
+                font-weight:bold;
+            }
+            .info-box {
+                background-color: #16213e;
+                border: 1px solid #0f3460;
+                border-radius: 12px;
+                padding: 24px;
+                max-width: 550px;
+                margin: 30px auto;
+                text-align: left;
+                line-height: 1.7;
+                color: #f5f0e8
+            }
+            .info-box p {
+                margin-bottom: 12px;
+            }
+            .info-box strong {
+                color: #c9a96e;
+            }
+            select {
+                padding: 14px 18px;
+                font-size: 1.1rem;
+                border-radius: 10px;
+                border: 2px solid #c9a96e;
+                background-color: #16213e;
+                color:#f5f0e8;
+                width: 200px;
+                outline: none;
+                cursor: pointer;
+                margin-right: 10px;
+            }
+            select:focus {
+                border-color: #00d4ff;
+            }
+            input[type="number"] {
+                padding: 14px 18px;
+                font-size: 1.1rem;
+                border-radius: 10px;
+                border: 2px solid #c9a96e;
+                background-color: #16213e;
+                color: #f5f0e8;
+                width: 280px;
+                outline: none;
+            }
+            input[type="number"]::-webkit-outer-spin-button,
+            input[type="number"]::-webkit-inner-spin-button {
+                -webkit-appearance: none;
+                margin: 0;
+                display: none;
+            }
+            button {
+                padding: 14px 28px;
+                font-size: 1.1rem;
+                background-color: #c9a96e;
+                color:#1a1a2e;
+                border: none;
+                border-radius: 10px;
+                cursor: pointer;
+                margin-left: 10px;
+                font-weight: 600;
+                transition: background-color 0.2s;
+            }
+            button:hover {
+                background-color: #00d4ff;
+                color:#1a1a2e
+            }
+            .input-container {
+                margin: 20px 0;
+            }
+        </style>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    </head>
+    <body>
+      
+        <h1>AI Water Footprint Calculator 👌</h1>
+        <p>Estimate how much water your AI usage consumes.</p>
+
+        <div class="input-container">
+            <select id="provider">
+                <option value="gpt4">ChatGPT(GPT-4)</option>
+                <option value="claude-opus">Claude(Opus)</option>
+                <option value="gemini">Gemini(Advanced)</option>
+                <option value="gpt3.5">ChatGPT(GPT-3.5)</option>
+                <option value="claude-haiku">Claude(Haiku)</option>
+                <option value="grok">Grok(xAI)</option>
+                <option value="kimi">Kimi(MoonShot)</option>
+                <option value="meta-ai">Meta AI</option>
+                <option value="manus">Manus</option>
+                <option value="local">Local AI(LLaMa)</option>
+            </select>
+            <input type="number"
+            id="queries" placeholder="Number of queries today">
+            <button
+            onclick="calculate()">Calculate</button>
+<button
+onclick="saveToTracker()"
+style="background-color:#4ade80;margin-left:10px">Save to Tracker</button>
+        </div>
+        <div class="water-display"
+        id="result"></div>
+
+        <div class="info-box">
+            <p><strong>How it works:</strong> Research from UC Riverside found that a single ChatGPT conversation of 20-50 questions can use about 500ml of water. That's approximately <strong>10-25 ml per query</strong> depending on the model size.</p>
+<p>We use an average of <strong>15 ml per query</strong> for this calculator.</p>
+        </div>
+<div style="max-width:900px;margin:40px auto;padding:25px;background-color:#16213e;border:1px solid #0f3460;border-radius:14px">
+            <h3 style="color:#e0e0e0;margin-bottom:5px;font-size:1.3rem">Water Cost per Query</h3>
+            <p style="color:#c4bba9;font-size:0.85rem;margin-bottom:20px">Comparing AI providers by estimated water usage</p>
+            <canvas id="chart"></canvas>
+        </div>
+        <div style="max-width:800px;margin:40px auto;padding:25px;background-color:#16213e;border:1px solid #0f3460;border-radius:14px">
+            <h3 style="color:#e0e0e0;margin-bottom:5px;font-size:1.3rem">My Water Usage Tracker</h3>
+            <p style="color:#c4bba9;font-size:0.85rem;margin-bottom:20px">Track your AI water consumption over time</p>
+            <div id="tracker-display" style="text-align:left">
+                <p style="color:#c4bba9;font-size:0.9rem" id="tracker-msg">No entries yet. Calculate your usage and click "Save to Tracker" to start.</p>
+            </div>
+        </div>
+
+        <script>
+            var waterCosts = {
+                'gpt4': { name: 'ChatGPT (GPT-4)', ml: 25 },
+                'claude-opus': { name: 'Claude (Opus)', ml: 20 },
+                'gemini': { name: 'Gemini (Advanced)', ml: 22 },
+                'gpt3.5': { name: 'ChatGPT (GPT-3.5)', ml: 10 },
+                'claude-haiku': { name: 'Claude (Haiku)', ml: 8 },
+                'grok': { name: 'Grok (xAI)', ml: 22 },
+                'kimi': { name: 'Kimi (Moonshot)', ml: 18 },
+                'meta-ai': { name: 'Meta AI', ml: 15 },
+                'manus': { name: 'Manus', ml: 20 },
+                'local': { name: 'Local AI (LLaMA)', ml: 2 }
+            };
+
+            var biggestML = 25;
+
+            function calculate() {
+                var provider = document.getElementById('provider').value;
+                var queries = document.getElementById('queries').value;
+                var waterPerQuery = waterCosts[provider].ml;
+                var totalWater = queries * waterPerQuery;
+
+                if (queries > 0) {
+                    var saved = (biggestML - waterPerQuery) * queries;
+
+                    var resultHTML = totalWater + ' mL of water<br>';
+                    resultHTML += '<small style="font-size:1rem;color:#c4bba9">using ' + waterCosts[provider].name + ' at ' + waterPerQuery + ' mL/query</small>';
+
+                    if (saved > 0) {
+                        resultHTML += '<br><span style="color:#4ade80;font-size:1rem;margin-top:10px;display:inline-block">You saved ' + saved + ' mL compared to using GPT-4</span>';
+
+                        var cheekyRemarks = [
+                            'See? LLaMA cares about the environment, guess you don\'t 😗',
+                            'Your data center\'s water bill thanks you 💧',
+                            'Mother Earth approves of this choice 🌍',
+                            'The ice caps are breathing a sigh of relief 🧊',
+                            'You\'re literally saving the planet one query at a time 🌊',
+                            'Not all heroes wear capes, some use smaller AI models 🦸',
+                            'GPT-4 called — it\'s jealous of your carbon footprint 👀',
+                            'This is what choosing peace looks like ✌️',
+                            'Your queries: 100. Water wasted: less. Vibes: immaculate ✨',
+                            'The water crisis didn\'t stand a chance against you 💪'
+                        ];
+
+                        var randomRemark = cheekyRemarks[Math.floor(Math.random() * cheekyRemarks.length)];
+                        resultHTML += '<br><span style="color:#c9a96e;font-size:0.9rem;font-style:italic;margin-top:5px;display:inline-block">' + randomRemark + '</span>';
+                    }
+
+                    document.getElementById('result').innerHTML = resultHTML;
+                } else {
+                    document.getElementById('result').innerHTML = 'Please enter a number of queries.';
+                }
+            }
+            var ctx = document.getElementById('chart').getContext('2d');
+            var labels = [];
+            var data = [];
+            var bgColors = [];
+            var borderColors = [];
+
+            for (var key in waterCosts) {
+                labels.push(waterCosts[key].name);
+                data.push(waterCosts[key].ml);
+                var ml = waterCosts[key].ml;
+                if (ml <= 5) {
+                    bgColors.push('rgba(74, 222, 128, 0.7)');
+                    borderColors.push('rgba(74, 222, 128, 1)');
+                } else if (ml <= 12) {
+                    bgColors.push('rgba(201, 169, 110, 0.7)');
+                    borderColors.push('rgba(201, 169, 110, 1)');
+                } else if (ml <= 18) {
+                    bgColors.push('rgba(255, 180, 68, 0.7)');
+                    borderColors.push('rgba(255, 180, 68, 1)');
+                } else {
+                    bgColors.push('rgba(255, 68, 68, 0.7)');
+                    borderColors.push('rgba(255, 68, 68, 1)');
+                }
+            }
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Water per query (mL)',
+                        data: data,
+                        backgroundColor: bgColors,
+                        borderColor: borderColors,
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        barPercentage: 0.7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    aspectRatio: 2,
+                    animation: {
+                        duration: 800,
+                        easing: 'easeOutQuart'
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: '#1a1a2e',
+                            titleColor: '#f5f0e8',
+                            bodyColor: '#c4bba9',
+                            borderColor: '#0f3460',
+                            borderWidth: 1,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.y + ' mL per query';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { color: '#c4bba9', font: { size: 12 } },
+                            grid: { color: 'rgba(15, 52, 96, 0.5)' },
+                            title: { display: true, text: 'Water (mL per query)', color: '#c4bba9', font: { size: 13 } }
+                        },
+                        x: {
+                            ticks: { 
+                                color: '#c4bba9', 
+                                font: { size: 10 },
+                                 maxRotation: 45, 
+                                minRotation: 45
+                            },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+            function saveToTracker() {
+                var provider = document.getElementById('provider').value;
+                var queries = document.getElementById('queries').value;
+
+                if (queries <= 0) {
+                    alert('Please enter a number of queries first!');
+                    return;
+                }
+
+                var entry = {
+                    date: new Date().toISOString().split('T')[0],
+                    provider: waterCosts[provider].name,
+                    queries: parseInt(queries),
+                    waterUsed: parseInt(queries) * waterCosts[provider].ml,
+                    waterSaved: parseInt(queries) * (biggestML - waterCosts[provider].ml)
+                };
+
+                var tracker = JSON.parse(localStorage.getItem('waterTracker') || '[]');
+                tracker.push(entry);
+                localStorage.setItem('waterTracker', JSON.stringify(tracker));
+                updateTrackerDisplay();
+            }
+
+            function updateTrackerDisplay() {
+                var tracker = JSON.parse(localStorage.getItem('waterTracker') || '[]');
+
+                if (tracker.length === 0) {
+                    var msgEL =
+                    document.getElementById('tracker-msg');
+                    if (msgEL) msgEL.style.display = 'block' ;
+                    return;
+                }
+                var msgEL =document.getElementById('tracker-msg');
+                if (msgEL) msgEL.style.display = 'none';
+
+                var today = new Date().toISOString().split('T')[0];
+                var weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                var monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+                var todayWater = 0, todaySaved = 0, todayQueries = 0;
+                var weekWater = 0, weekSaved = 0, weekQueries = 0;
+                var monthWater = 0, monthSaved = 0, monthQueries = 0;
+
+                for (var i = 0; i < tracker.length; i++) {
+                    var e = tracker[i];
+                    if (e.date >= today) {
+                        todayWater += e.waterUsed;
+                        todaySaved += e.waterSaved;
+                        todayQueries += e.queries;
+                    }
+                    if (e.date >= weekAgo) {
+                        weekWater += e.waterUsed;
+                        weekSaved += e.waterSaved;
+                        weekQueries += e.queries;
+                    }
+                    if (e.date >= monthAgo) {
+                        monthWater += e.waterUsed;
+                        monthSaved += e.waterSaved;
+                        monthQueries += e.queries;
+                    }
+                }
+
+                var html = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:15px;margin-bottom:20px">';
+
+                html += '<div style="background-color:#1a1a2e;border-radius:10px;padding:15px;text-align:center;border:1px solid #0f3460">';
+                html += '<p style="color:#c4bba9;font-size:0.8rem;margin-bottom:5px">TODAY</p>';
+                html += '<p style="color:#00d4ff;font-size:1.5rem;font-weight:bold">' + todayWater + ' mL</p>';
+                html += '<p style="color:#4ade80;font-size:0.8rem">Saved: ' + todaySaved + ' mL</p>';
+                html += '<p style="color:#c4bba9;font-size:0.75rem">' + todayQueries + ' queries</p>';
+                html += '</div>';
+
+                html += '<div style="background-color:#1a1a2e;border-radius:10px;padding:15px;text-align:center;border:1px solid #0f3460">';
+                html += '<p style="color:#c4bba9;font-size:0.8rem;margin-bottom:5px">THIS WEEK</p>';
+                html += '<p style="color:#00d4ff;font-size:1.5rem;font-weight:bold">' + weekWater + ' mL</p>';
+                html += '<p style="color:#4ade80;font-size:0.8rem">Saved: ' + weekSaved + ' mL</p>';
+                html += '<p style="color:#c4bba9;font-size:0.75rem">' + weekQueries + ' queries</p>';
+                html += '</div>';
+
+                html += '<div style="background-color:#1a1a2e;border-radius:10px;padding:15px;text-align:center;border:1px solid #0f3460">';
+                html += '<p style="color:#c4bba9;font-size:0.8rem;margin-bottom:5px">THIS MONTH</p>';
+                html += '<p style="color:#00d4ff;font-size:1.5rem;font-weight:bold">' + monthWater + ' mL</p>';
+                html += '<p style="color:#4ade80;font-size:0.8rem">Saved: ' + monthSaved + ' mL</p>';
+                html += '<p style="color:#c4bba9;font-size:0.75rem">' + monthQueries + ' queries</p>';
+                html += '</div>';
+
+                html += '</div>';
+
+                html += '<button onclick="clearTracker()" style="font-size:0.8rem;padding:8px 16px;background-color:transparent;color:#ff6666;border:1px solid #ff6666;border-radius:8px;cursor:pointer">Clear All Data</button>';
+
+                document.getElementById('tracker-display').innerHTML = html;
+            }
+
+            function clearTracker() {
+                if (confirm('Are you sure you want to clear all your tracking data?')) {
+                    localStorage.removeItem('waterTracker');
+                    updateTrackerDisplay();
+                    location.reload();
+                }
+            }
+
+            updateTrackerDisplay();
+        </script>
+    </body>
+</html>
