@@ -5,7 +5,7 @@ A web-based tool that estimates the hidden water cost of AI usage and helps user
 ## The Problem
 
 Training and running AI models requires massive amounts of water for data center cooling. A single ChatGPT conversation of 20-50 questions can use about 500 mL of water. Most users are unaware of this cost.
-
+That's my reason for this miniscule project! 
 ## What This Does
 
 This calculator lets users estimate how much water their daily AI usage consumes, making the invisible environmental cost visible at the point of use.
